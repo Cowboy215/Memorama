@@ -1,9 +1,34 @@
 import random
-from src.controllers.usuario_controller import insertar_usuario, obtener_usuarios, borrar_usuario, actualizar_usuario
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+import sqlite3
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, g
+
+from src.controllers.usuario_controller import (
+    insertar_usuario,
+    obtener_usuarios,
+    borrar_usuario,
+    actualizar_usuario
+)
 
 app = Flask(__name__)
 app.secret_key = '123459384'  # Necesario para manejar sesiones
+
+DATABASE = "memoramaDB.db"
+
+# Función para conectar a la base de datos
+def get_db():
+    """Conexión a la base de datos SQLite."""
+    db = getattr(g, '_database', None)
+    if db is None:
+        db = g._database = sqlite3.connect(DATABASE)
+        db.row_factory = sqlite3.Row  # Permite acceder a los datos como diccionarios
+    return db
+
+@app.teardown_appcontext
+def close_connection(exception):
+    """Cerrar conexión a la base de datos."""
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
 
 # Definir las cartas para cada dificultad
 difficulties = {
@@ -18,7 +43,7 @@ messages = {
     'loss': "Lo siento, has perdido. Se acabaron tus intentos."
 }
 
-
+#tabla
 @app.route('/')
 def index():
     return render_template('difficulty.html')
@@ -45,23 +70,27 @@ def play():
         return redirect(url_for('play'))
     return render_template('index.html', cards=session['cards'])
 
-#
-
 
 @app.route('/end', methods=['GET', 'POST'])
 def end():
     if request.method == 'POST':
-        data = request.get_json()
-        result = data.get('status')
-        session['result'] = result
-
-        # Guardar el resultado en la base de datos
-        nombre_usuario = session.get('nombre', 'Usuario Anónimo')
+        nombre_usuario = request.form.get('nombre', 'Anónimo')
         puntuacion = session.get('score', 0)
-        dificultad = session.get('difficulty', 'easy') #falta corregir estos gets ;D
-        insertar_usuario(nombre_usuario, puntuacion, 0, dificultad)
+        dificultad = session.get('difficulty', 'easy')
+        tiempo = session.get('count', 0)  # Aquí podrías calcular el tiempo de juego si lo tienes disponible.
 
-        return redirect(url_for('end'))
+        # Guardar en la base de datos
+        db = get_db()
+        db.execute(
+            'INSERT INTO usuario (nombre, puntuacion, tiempo, dificultad) VALUES (?, ?, ?, ?)',
+            (nombre_usuario, puntuacion, tiempo, dificultad)
+        )
+        last_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+        session['last_score_id'] = last_id  # Guardar el ID en la sesión
+        db.commit()
+
+        # Redirigir a la tabla de puntuaciones
+        return redirect(url_for('show_scores'))
 
     if request.method == 'GET':
         result = session.get('result')
@@ -70,9 +99,53 @@ def end():
 
         return render_template('end.html', message=messages[result])
 
+@app.route('/scores', methods=['GET'])
+def show_scores():
+    """Mostrar los 10 mejores puntajes y la posición del último puntaje del usuario."""
+    db = get_db()
+    
+    # Obtener los 10 mejores puntajes
+    cursor = db.execute(
+        'SELECT nombre, puntuacion, tiempo, dificultad FROM usuario ORDER BY puntuacion DESC, tiempo ASC LIMIT 10'
+    )
+    top_scores = cursor.fetchall()
+
+    # Obtener el puntaje de la última partida
+    last_score_id = session.get('last_score_id')  # Guarda el ID del puntaje al insertar
+    last_score = None
+    last_position = None
+
+    if last_score_id:
+        # Obtener los detalles del último puntaje
+        cursor = db.execute(
+            'SELECT nombre, puntuacion, tiempo, dificultad FROM usuario WHERE id = ?',
+            (last_score_id,)
+        )
+        last_score = cursor.fetchone()
+
+        # Calcular la posición del último puntaje en la tabla general
+        cursor = db.execute(
+            '''
+            SELECT COUNT(*) + 1
+            FROM usuario
+            WHERE puntuacion > (SELECT puntuacion FROM usuario WHERE id = ?)
+            OR (puntuacion = (SELECT puntuacion FROM usuario WHERE id = ?) AND tiempo < (SELECT tiempo FROM usuario WHERE id = ?))
+            ''',
+            (last_score_id, last_score_id, last_score_id)
+        )
+        last_position = cursor.fetchone()[0]
+
+    return render_template(
+        'scores.html',
+        top_scores=top_scores,
+        last_score=last_score,
+        last_position=last_position
+    )
 
 
-@app.route('/usuarios', methods=['GET']) #Metodos crud para crear la tabla :D
+
+
+@app.route('/usuarios', methods=['GET'])
 def listar_usuarios():
     usuarios = obtener_usuarios()
     usuarios_json = [{"nombre": u.nombre, "puntuacion": u.puntuacion,
