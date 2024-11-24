@@ -46,7 +46,11 @@ messages = {
 #tabla
 @app.route('/')
 def index():
-    return render_template('difficulty.html')
+    return render_template('home.html')
+
+@app.route('/difficulty')
+def difficulty():
+        return render_template('difficulty.html')
 
 
 @app.route('/play', methods=['GET', 'POST'])
