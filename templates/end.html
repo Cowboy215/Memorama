@@ -56,9 +56,20 @@
       function submitName() {
         const playerName = document.getElementById("playerName").value;
         if (playerName) {
-          //aqui la funcion de redireccion a la tabla de puntuaciones
+          fetch("/end", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ player: playerName }),
+            })
+            .then((response) => {
+            if (response.ok) {
+                window.location.replace("/end");
+            } else {
+                throw new Error("Error en la solicitud");
+            }
+            })
+            .catch((error) => console.error("ERROR:", error));
         } else {
-          //se permite no dar nombre asigna un nombre provisional
           document.getElementById("playerName").value = "Anonimo";
         }
       }

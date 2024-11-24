@@ -129,23 +129,23 @@
         }
 
         function flipCard(card) {
-            if (!able_to_flip) {
+            if (!able_to_flip || card.classList.contains("flipped") || flippedCards.length >= 2) {
                 return;
             }
+            able_to_flip = false;
+            card.classList.add("flipped");
+            flippedCards.push(card);
+            card.querySelector(".card-image").style.display = "block"; 
 
-            if (flippedCards.length < 2 && !matchedCards.includes(card)) {
-                card.classList.add("flipped");
-                card.querySelector(".card-image").style.display = "block"; 
-                flippedCards.push(card);
-            }
-
-            if (flippedCards.length === 2) {
+            if (flippedCards.length === 2){
                 checkMatch();
-            }
+            }  
+            else{
+                able_to_flip = true;
+            }  
         }
 
         function checkMatch() {
-            able_to_flip = false;
             const [firstCard, secondCard] = flippedCards;
             if (firstCard.getAttribute('data-card') === secondCard.getAttribute('data-card')) {
                     matchedCards.push(firstCard);
@@ -188,16 +188,20 @@
             fetch("/end", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: result }),
+                body: JSON.stringify({ 
+                    result: result,
+                    final_score: score,
+                    difficulty: difficulty
+                }),
             })
-                .then((response) => {
-                if (response.ok) {
-                    window.location.replace("/end");
-                } else {
-                    throw new Error("Error en la solicitud");
-                }
-                })
-                .catch((error) => console.error("ERROR:", error));
+            .then((response) => {
+            if (response.ok) {
+                window.location.replace("/end");
+            } else {
+                throw new Error("Error en la solicitud");
+            }
+            })
+            .catch((error) => console.error("ERROR:", error));
         }
     </script>
 
