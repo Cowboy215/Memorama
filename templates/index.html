@@ -131,31 +131,28 @@
         }
       }
 
-      function flipCard(card) {
-        if (!able_to_flip) {
-          return;
+        function flipCard(card) {
+            if (!able_to_flip || card.classList.contains("flipped") || flippedCards.length >= 2) {
+                return;
+            }
+            able_to_flip = false;
+            card.classList.add("flipped");
+            flippedCards.push(card);
+            card.querySelector(".card-image").style.display = "block"; 
+
+            if (flippedCards.length === 2){
+                checkMatch();
+            }  
+            else{
+                able_to_flip = true;
+            }  
         }
 
-        if (flippedCards.length < 2 && !matchedCards.includes(card)) {
-          card.classList.add("flipped");
-          card.querySelector(".card-image").style.display = "block";
-          flippedCards.push(card);
-        }
-
-        if (flippedCards.length === 2) {
-          checkMatch();
-        }
-      }
-
-      function checkMatch() {
-        able_to_flip = false;
-        const [firstCard, secondCard] = flippedCards;
-        if (
-          firstCard.getAttribute("data-card") ===
-          secondCard.getAttribute("data-card")
-        ) {
-          matchedCards.push(firstCard);
-          matchedCards.push(secondCard);
+        function checkMatch() {
+            const [firstCard, secondCard] = flippedCards;
+            if (firstCard.getAttribute('data-card') === secondCard.getAttribute('data-card')) {
+                    matchedCards.push(firstCard);
+                    matchedCards.push(secondCard);
 
           flippedCards = [];
           checkGameState();
@@ -186,29 +183,27 @@
         }
       }
 
-      // Función que maneja la redirección dependiendo del resultado (win/lose)mmmm
-      function redirectToEnd(result) {
-        const score = document.getElementById("score").innerText; // Obtener el puntaje actualizado
-        fetch("/end", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json", // Enviar datos como JSON
-          },
-          body: JSON.stringify({
-            status: result,
-            score: score,
-            time: elapsedTime, // Enviar el tiempo al servidor
-          }),
-        })
-          .then((response) => {
-            if (response.ok) {
-              window.location.replace("/end");
-            } else {
-              throw new Error("Error en la solicitud");
-            }
-          })
-          .catch((error) => console.error("ERROR:", error));
-      }
+        // Función que maneja la redirección dependiendo del resultado (win/lose)
+        function redirectToEnd(result) {
+            fetch("/end", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    result: result,
+                    final_score: score,
+                    difficulty: difficulty,
+                    count: elapsedTime
+                }),
+            })
+                .then((response) => {
+                if (response.ok) {
+                    window.location.replace("/end");
+                } else {
+                    throw new Error("Error en la solicitud");
+                }
+                })
+                .catch((error) => console.error("ERROR:", error));
+        }
     </script>
 
     <form action="{{ url_for('index') }}">

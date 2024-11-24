@@ -14,6 +14,7 @@
   <body class="bg-dark text-light d-flex align-items-center justify-content-center vh-100">
     <div class="container mt-5">
       <h1 class="text-center">Tabla de Puntuaciones</h1>
+
       <!-- Contenedor para hacer la tabla responsiva -->
       <div class="table-responsive">
         <h2 class="text-center">Top 10</h2>
@@ -24,7 +25,6 @@
               <th>Nombre</th>
               <th>Puntuación</th>
               <th>Tiempo</th>
-              <th>Dificultad</th>
             </tr>
           </thead>
           <tbody>
@@ -34,7 +34,6 @@
               <td>{{ score['nombre'] }}</td>
               <td>{{ score['puntuacion'] }}</td>
               <td>{{ score['tiempo'] }}</td>
-              <td>{{ score['dificultad'] }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -49,7 +48,6 @@
               <th>Nombre</th>
               <th>Puntuación</th>
               <th>Tiempo</th>
-              <th>Dificultad</th>
             </tr>
           </thead>
           <tbody>
@@ -59,7 +57,6 @@
               <td>{{ last_score['nombre'] }}</td>
               <td>{{ last_score['puntuacion'] }}</td>
               <td>{{ last_score['tiempo'] }}</td>
-              <td>{{ last_score['dificultad'] }}</td>
             </tr>
             {% else %}
             <tr>
@@ -69,8 +66,15 @@
           </tbody>
         </table>
       </div>
+
       <div class="text-center mt-5">
         <a href="/" class="btn btn-primary">Volver al inicio</a>
+      </div>
+      
+      <div class="text-center mt-4 mb-4">
+        <button class="btn btn-secondary mx-2">Baja</button>
+        <button class="btn btn-secondary mx-2">Media</button>
+        <button class="btn btn-secondary mx-2">Alta</button>
       </div>
     </div>
   </body>
