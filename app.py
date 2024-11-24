@@ -1,9 +1,34 @@
 import random
-# from src.controllers.usuario_controller import insertar_usuario, obtener_usuarios, borrar_usuario, actualizar_usuario
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+import sqlite3
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, g
+
+from src.controllers.usuario_controller import (
+    insertar_usuario,
+    obtener_usuarios,
+    borrar_usuario,
+    actualizar_usuario
+)
 
 app = Flask(__name__)
 app.secret_key = '123459384'  # Necesario para manejar sesiones
+
+DATABASE = "memoramaDB.db"
+
+# Función para conectar a la base de datos
+def get_db():
+    """Conexión a la base de datos SQLite."""
+    db = getattr(g, '_database', None)
+    if db is None:
+        db = g._database = sqlite3.connect(DATABASE)
+        db.row_factory = sqlite3.Row  # Permite acceder a los datos como diccionarios
+    return db
+
+@app.teardown_appcontext
+def close_connection(exception):
+    """Cerrar conexión a la base de datos."""
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
 
 # Definir las cartas para cada dificultad
 difficulties = {
@@ -23,6 +48,10 @@ default_values = {"result": "loss", "player": None, "final_score": 0, "difficult
 
 @app.route('/')
 def index():
+    return render_template('home.html')
+
+@app.route('/difficulty')
+def difficulty():
     session.clear()
     return render_template('difficulty.html')
 
@@ -52,19 +81,27 @@ def end():
 
         for type in default_values.keys():
             information = data.get(type, default_values[type])
-            print(information)
             if information:
                 session[type] = session.get(type, information)
 
         if session.get("player", None):
-            return redirect(url_for('end'))
-        else:
-            
+            # Guardar en la base de datos
+            db = get_db()
             nombre_usuario = session.get('player')
             puntuacion = session.get('score', 0)
-            dificultad = session.get('difficulty', 'easy') #falta corregir estos gets ;D
-            print(nombre_usuario, puntuacion, dificultad)
-            # insertar_usuario(nombre_usuario, puntuacion, 0, dificultad)
+            dificultad = session.get('difficulty', 'easy')
+            tiempo = session.get('count', 0)
+            db.execute(
+                'INSERT INTO usuario (nombre, puntuacion, tiempo, dificultad) VALUES (?, ?, ?, ?)',
+                (nombre_usuario, puntuacion, tiempo, dificultad)
+            )
+            last_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+            session['last_score_id'] = last_id  # Guardar el ID en la sesión
+            db.commit()
+
+            # Redirigir a la tabla de puntuaciones
+            return redirect(url_for('show_scores'))
+        else:
             return redirect(url_for('end'))
 
     if request.method == 'GET':
@@ -75,36 +112,80 @@ def end():
 
         return render_template('end.html', message=messages[result])
 
+@app.route('/scores', methods=['GET'])
+def show_scores():
+    """Mostrar los 10 mejores puntajes y la posición del último puntaje del usuario."""
+    db = get_db()
+    
+    # Obtener los 10 mejores puntajes
+    cursor = db.execute(
+        'SELECT nombre, puntuacion, tiempo, dificultad FROM usuario ORDER BY puntuacion DESC, tiempo ASC LIMIT 10'
+    )
+    top_scores = cursor.fetchall()
+
+    # Obtener el puntaje de la última partida
+    last_score_id = session.get('last_score_id')  # Guarda el ID del puntaje al insertar
+    last_score = None
+    last_position = None
+
+    if last_score_id:
+        # Obtener los detalles del último puntaje
+        cursor = db.execute(
+            'SELECT nombre, puntuacion, tiempo, dificultad FROM usuario WHERE id = ?',
+            (last_score_id,)
+        )
+        last_score = cursor.fetchone()
+
+        # Calcular la posición del último puntaje en la tabla general
+        cursor = db.execute(
+            '''
+            SELECT COUNT(*) + 1
+            FROM usuario
+            WHERE puntuacion > (SELECT puntuacion FROM usuario WHERE id = ?)
+            OR (puntuacion = (SELECT puntuacion FROM usuario WHERE id = ?) AND tiempo < (SELECT tiempo FROM usuario WHERE id = ?))
+            ''',
+            (last_score_id, last_score_id, last_score_id)
+        )
+        last_position = cursor.fetchone()[0]
+
+    return render_template(
+        'scores.html',
+        top_scores=top_scores,
+        last_score=last_score,
+        last_position=last_position
+    )
 
 
-# @app.route('/usuarios', methods=['GET']) #Metodos crud para crear la tabla :D
-# def listar_usuarios():
-#     usuarios = obtener_usuarios()
-#     usuarios_json = [{"nombre": u.nombre, "puntuacion": u.puntuacion,
-#                       "tiempo": u.tiempo, "dificultad": u.dificultad} for u in usuarios]
-#     return jsonify(usuarios_json), 200
 
 
-# @app.route('/usuarios', methods=['POST'])
-# def crear_usuario():
-#     data = request.get_json()
-#     insertar_usuario(data['nombre'], data.get('puntuacion', 0), data.get(
-#         'tiempo', 0), data.get('dificultad', 'easy'))
-#     return jsonify({"mensaje": "Usuario creado exitosamente"}), 201
+@app.route('/usuarios', methods=['GET'])
+def listar_usuarios():
+    usuarios = obtener_usuarios()
+    usuarios_json = [{"nombre": u.nombre, "puntuacion": u.puntuacion,
+                      "tiempo": u.tiempo, "dificultad": u.dificultad} for u in usuarios]
+    return jsonify(usuarios_json), 200
 
 
-# @app.route('/usuarios/<int:id_usuario>', methods=['DELETE'])
-# def eliminar_usuario(id_usuario):
-#     borrar_usuario(id_usuario)
-#     return jsonify({"mensaje": "Usuario eliminado exitosamente"}), 200
+@app.route('/usuarios', methods=['POST'])
+def crear_usuario():
+    data = request.get_json()
+    insertar_usuario(data['nombre'], data.get('puntuacion', 0), data.get(
+        'tiempo', 0), data.get('dificultad', 'easy'))
+    return jsonify({"mensaje": "Usuario creado exitosamente"}), 201
 
 
-# @app.route('/usuarios/<int:id_usuario>', methods=['PUT'])
-# def modificar_usuario(id_usuario):
-#     data = request.get_json()
-#     actualizar_usuario(id_usuario, data['nombre'], data.get(
-#         'puntuacion', 0), data.get('tiempo', 0), data.get('dificultad', 'easy'))
-#     return jsonify({"mensaje": "Usuario actualizado exitosamente"}), 200
+@app.route('/usuarios/<int:id_usuario>', methods=['DELETE'])
+def eliminar_usuario(id_usuario):
+    borrar_usuario(id_usuario)
+    return jsonify({"mensaje": "Usuario eliminado exitosamente"}), 200
+
+
+@app.route('/usuarios/<int:id_usuario>', methods=['PUT'])
+def modificar_usuario(id_usuario):
+    data = request.get_json()
+    actualizar_usuario(id_usuario, data['nombre'], data.get(
+        'puntuacion', 0), data.get('tiempo', 0), data.get('dificultad', 'easy'))
+    return jsonify({"mensaje": "Usuario actualizado exitosamente"}), 200
 
 
 if __name__ == '__main__':

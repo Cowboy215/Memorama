@@ -21,35 +21,25 @@
       <h3>{{ message }}</h3>
 
       <p>Guarda tu partida</p>
-      <div class="form-floating">
-        <textarea
-          class="form-control"
-          id="playerName"
-          value=""
-          class="name-area"
-        ></textarea>
-        <label for="floatingTextarea">Escribe tu nombre </label>
-      </div>
-      <br /><br />
+      <form id="saveForm" method="POST" action="{{ url_for('end') }}">
+        <div class="form-floating">
+          <textarea
+            class="form-control"
+            id="playerName"
+            name="nombre"
+            placeholder="Escribe tu nombre"
+          ></textarea>
+          <label for="floatingTextarea">Escribe tu nombre</label>
+        </div>
+        <br /><br />
 
-      <div class="btn-group">
-        <button
-          type="button"
-          name="difficulty"
-          value="easy"
-          class="btn btn-outline-danger btn-lg"
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          value="hard"
-          class="btn btn-outline-success btn-lg"
-          onclick="submitName()"
-        >
-          Guardar
-        </button>
-      </div>
+        <div class="btn-group">
+          <a href="/" class="btn btn-outline-danger btn-lg">Cancelar</a>
+          <button type="submit" class="btn btn-outline-success btn-lg">
+            Guardar
+          </button>
+        </div>
+      </form>
     </div>
 
     <script>
