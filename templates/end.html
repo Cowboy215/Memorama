@@ -21,7 +21,6 @@
       <h3>{{ message }}</h3>
 
       <p>Guarda tu partida</p>
-      <form id="saveForm" method="POST" action="{{ url_for('end') }}">
         <div class="form-floating">
           <textarea
             class="form-control"
@@ -35,33 +34,31 @@
 
         <div class="btn-group">
           <a href="/" class="btn btn-outline-danger btn-lg">Cancelar</a>
-          <button type="submit" class="btn btn-outline-success btn-lg">
+          <button onclick="submitName()" class="btn btn-outline-success btn-lg">
             Guardar
           </button>
         </div>
-      </form>
     </div>
 
     <script>
+      let playerName;
+
       function submitName() {
-        const playerName = document.getElementById("playerName").value;
-        if (playerName) {
-          fetch("/end", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ player: playerName }),
-            })
-            .then((response) => {
-            if (response.ok) {
-                window.location.replace("/end");
-            } else {
-                throw new Error("Error en la solicitud");
-            }
-            })
-            .catch((error) => console.error("ERROR:", error));
-        } else {
-          document.getElementById("playerName").value = "Anonimo";
-        }
+        playerName = document.getElementById("playerName").value || "Anonimo";
+        fetch("/scores", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ player: playerName }),
+          })
+          .then((response) => {
+          if (response.ok) {
+              window.location.replace("/scores");
+          } else {
+              throw new Error("Error en la solicitud");
+          }
+          })
+          .catch((error) => console.error("ERROR:", error));
+        
       }
     </script>
   </body>

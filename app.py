@@ -11,6 +11,7 @@ from src.controllers.usuario_controller import (
 
 app = Flask(__name__)
 app.secret_key = '123459384'  # Necesario para manejar sesiones
+_OK = '', 200
 
 DATABASE = "memoramaDB.db"
 
@@ -44,7 +45,7 @@ messages = {
     'loss': "Lo siento, has perdido. Se acabaron tus intentos."
 }
 
-default_values = {"result": "loss", "player": None, "final_score": 0, "difficulty": None}
+default_values = ["result", "player", "final_score", "difficulty", "count"]
 
 @app.route('/')
 def index():
@@ -79,30 +80,12 @@ def end():
     if request.method == 'POST':
         data = request.get_json()
 
-        for type in default_values.keys():
-            information = data.get(type, default_values[type])
+        for type in default_values:
+            information = data.get(type, None)
             if information:
                 session[type] = session.get(type, information)
 
-        if session.get("player", None):
-            # Guardar en la base de datos
-            db = get_db()
-            nombre_usuario = session.get('player')
-            puntuacion = session.get('score', 0)
-            dificultad = session.get('difficulty', 'easy')
-            tiempo = session.get('count', 0)
-            db.execute(
-                'INSERT INTO usuario (nombre, puntuacion, tiempo, dificultad) VALUES (?, ?, ?, ?)',
-                (nombre_usuario, puntuacion, tiempo, dificultad)
-            )
-            last_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
-            session['last_score_id'] = last_id  # Guardar el ID en la sesión
-            db.commit()
-
-            # Redirigir a la tabla de puntuaciones
-            return redirect(url_for('show_scores'))
-        else:
-            return redirect(url_for('end'))
+        return _OK
 
     if request.method == 'GET':
         result = session.get('result')
@@ -112,80 +95,117 @@ def end():
 
         return render_template('end.html', message=messages[result])
 
-@app.route('/scores', methods=['GET'])
+@app.route('/scores', methods=['GET', 'POST'])
 def show_scores():
-    """Mostrar los 10 mejores puntajes y la posición del último puntaje del usuario."""
-    db = get_db()
-    
-    # Obtener los 10 mejores puntajes
-    cursor = db.execute(
-        'SELECT nombre, puntuacion, tiempo, dificultad FROM usuario ORDER BY puntuacion DESC, tiempo ASC LIMIT 10'
-    )
-    top_scores = cursor.fetchall()
+    if request.method == 'POST':
+        data = request.get_json()
+        session["player"] = data.get("player", None)
 
-    # Obtener el puntaje de la última partida
-    last_score_id = session.get('last_score_id')  # Guarda el ID del puntaje al insertar
-    last_score = None
-    last_position = None
+        db = get_db()
 
-    if last_score_id:
-        # Obtener los detalles del último puntaje
-        cursor = db.execute(
-            'SELECT nombre, puntuacion, tiempo, dificultad FROM usuario WHERE id = ?',
-            (last_score_id,)
+        required_keys = ['player', 'final_score', 'count', 'difficulty']
+        data = {key: session.get(key) for key in required_keys}
+
+        if any(value is None for value in data.values()):
+            return redirect(url_for('index'))
+        
+        if data['difficulty'] in ['easy', 'medium', 'hard']:
+            table_name = data['difficulty']
+        else:
+            return redirect(url_for('index'))  
+        
+        db.execute(
+            f'INSERT INTO {table_name} (nombre, puntuacion, tiempo) VALUES (?, ?, ?)',
+            (data['player'], data['final_score'], data['count'])
         )
-        last_score = cursor.fetchone()
+        
+        last_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+        session['last_score_id'] = last_id  
 
-        # Calcular la posición del último puntaje en la tabla general
+        db.commit()
+
+        return _OK
+
+        
+    if request.method == "GET":
+        """Mostrar los 10 mejores puntajes y la posición del último puntaje del usuario."""
+        db = get_db()
+
+        difficulty = session.get('difficulty')
+
+        if not difficulty or difficulty not in ['easy', 'medium', 'hard']:
+            return redirect(url_for('index'))
+
+       
         cursor = db.execute(
-            '''
-            SELECT COUNT(*) + 1
-            FROM usuario
-            WHERE puntuacion > (SELECT puntuacion FROM usuario WHERE id = ?)
-            OR (puntuacion = (SELECT puntuacion FROM usuario WHERE id = ?) AND tiempo < (SELECT tiempo FROM usuario WHERE id = ?))
-            ''',
-            (last_score_id, last_score_id, last_score_id)
+            f'SELECT nombre, puntuacion, tiempo FROM {difficulty} ORDER BY puntuacion DESC, tiempo ASC LIMIT 10'
         )
-        last_position = cursor.fetchone()[0]
+        top_scores = cursor.fetchall()
 
-    return render_template(
-        'scores.html',
-        top_scores=top_scores,
-        last_score=last_score,
-        last_position=last_position
-    )
+        # Obtener el puntaje de la última partida
+        last_score_id = session.get('last_score_id')  # Guarda el ID del puntaje al insertar
+        last_score = None
+        last_position = None
+
+        if last_score_id:
+            # Obtener los detalles del último puntaje
+            cursor = db.execute(
+                f'SELECT nombre, puntuacion, tiempo FROM {difficulty} WHERE id = ?',
+                (last_score_id,)
+            )
+
+            last_score = cursor.fetchone()
+
+            cursor = db.execute(
+                f'''
+                SELECT COUNT(*) + 1
+                FROM {difficulty}
+                WHERE puntuacion > (SELECT puntuacion FROM {difficulty} WHERE id = ?)
+                OR (puntuacion = (SELECT puntuacion FROM {difficulty} WHERE id = ?) AND tiempo < (SELECT tiempo FROM {difficulty} WHERE id = ?))
+                ''',
+                (last_score_id, last_score_id, last_score_id)
+            )
+
+            last_position = cursor.fetchone()[0]
+
+        return render_template(
+            'scores.html',
+            top_scores=top_scores,
+            last_score=last_score,
+            last_position=last_position
+        )
 
 
 
 
-@app.route('/usuarios', methods=['GET'])
-def listar_usuarios():
-    usuarios = obtener_usuarios()
-    usuarios_json = [{"nombre": u.nombre, "puntuacion": u.puntuacion,
-                      "tiempo": u.tiempo, "dificultad": u.dificultad} for u in usuarios]
-    return jsonify(usuarios_json), 200
+# @app.route('/usuarios', methods=['GET'])
+# def listar_usuarios():
+#     usuarios = obtener_usuarios()
+#     usuarios_json = [{"nombre": u.nombre, "puntuacion": u.puntuacion,
+#                       "tiempo": u.tiempo, "dificultad": u.dificultad} for u in usuarios]
+#     return jsonify(usuarios_json), 200
 
 
-@app.route('/usuarios', methods=['POST'])
-def crear_usuario():
-    data = request.get_json()
-    insertar_usuario(data['nombre'], data.get('puntuacion', 0), data.get(
-        'tiempo', 0), data.get('dificultad', 'easy'))
-    return jsonify({"mensaje": "Usuario creado exitosamente"}), 201
+# @app.route('/usuarios', methods=['POST'])
+# def crear_usuario():
+#     data = request.get_json()
+#     insertar_usuario(data['nombre'], data.get('puntuacion', 0), data.get(
+#         'tiempo', 0), data.get('dificultad', 'easy'))
+#     return jsonify({"mensaje": "Usuario creado exitosamente"}), 201
 
 
-@app.route('/usuarios/<int:id_usuario>', methods=['DELETE'])
-def eliminar_usuario(id_usuario):
-    borrar_usuario(id_usuario)
-    return jsonify({"mensaje": "Usuario eliminado exitosamente"}), 200
+# @app.route('/usuarios/<int:id_usuario>', methods=['DELETE'])
+# def eliminar_usuario(id_usuario):
+#     borrar_usuario(id_usuario)
+#     return jsonify({"mensaje": "Usuario eliminado exitosamente"}), 200
 
 
-@app.route('/usuarios/<int:id_usuario>', methods=['PUT'])
-def modificar_usuario(id_usuario):
-    data = request.get_json()
-    actualizar_usuario(id_usuario, data['nombre'], data.get(
-        'puntuacion', 0), data.get('tiempo', 0), data.get('dificultad', 'easy'))
-    return jsonify({"mensaje": "Usuario actualizado exitosamente"}), 200
+# @app.route('/usuarios/<int:id_usuario>', methods=['PUT'])
+# def modificar_usuario(id_usuario):
+#     data = request.get_json()
+#     actualizar_usuario(id_usuario, data['nombre'], data.get(
+#         'puntuacion', 0), data.get('tiempo', 0), data.get('dificultad', 'easy'))
+#     return jsonify({"mensaje": "Usuario actualizado exitosamente"}), 200
 
 
 if __name__ == '__main__':
