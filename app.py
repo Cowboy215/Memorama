@@ -174,7 +174,251 @@ def show_scores():
             last_score=last_score,
             last_position=last_position
         )
+    
+#Insertando lo nuevo
 
+@app.route('/easy', methods=['GET', 'POST'])
+def show_scores_easy():
+    if request.method == 'POST':
+        data = request.get_json()
+        session["player"] = data.get("player", None)
+
+        db = get_db()
+
+        required_keys = ['player', 'final_score', 'count', 'difficulty']
+        data = {key: session.get(key) for key in required_keys}
+
+        if any(value is None for value in data.values()):
+            return redirect(url_for('index'))
+        
+        if data['difficulty'] in ['easy', 'medium', 'hard']:
+            table_name = data['difficulty']
+        else:
+            return redirect(url_for('index'))  
+        
+        db.execute(
+            f'INSERT INTO {table_name} (nombre, puntuacion, tiempo) VALUES (?, ?, ?)',
+            (data['player'], data['final_score'], data['count'])
+        )
+        
+        last_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+        session['last_score_id'] = last_id  
+
+        db.commit()
+
+        return _OK
+
+        
+    if request.method == "GET":
+        """Mostrar los 10 mejores puntajes y la posición del último puntaje del usuario."""
+        db = get_db()
+
+        difficulty = session.get('difficulty')
+
+        if not difficulty or difficulty not in ['easy', 'medium', 'hard']:
+            return redirect(url_for('index'))
+
+       
+        cursor = db.execute(
+            f'SELECT nombre, puntuacion, tiempo FROM easy ORDER BY puntuacion DESC, tiempo ASC LIMIT 10'
+        )
+        top_scores = cursor.fetchall()
+
+        # Obtener el puntaje de la última partida
+        last_score_id = session.get('last_score_id')  # Guarda el ID del puntaje al insertar
+        last_score = None
+        last_position = None
+
+        if last_score_id:
+            # Obtener los detalles del último puntaje
+            cursor = db.execute(
+                f'SELECT nombre, puntuacion, tiempo FROM easy WHERE id = ?',
+                (last_score_id,)
+            )
+
+            last_score = cursor.fetchone()
+
+            cursor = db.execute(
+                f'''
+                SELECT COUNT(*) + 1
+                FROM easy
+                WHERE puntuacion > (SELECT puntuacion FROM easy WHERE id = ?)
+                OR (puntuacion = (SELECT puntuacion FROM easy WHERE id = ?) AND tiempo < (SELECT tiempo FROM easy WHERE id = ?))
+                ''',
+                (last_score_id, last_score_id, last_score_id)
+            )
+
+            last_position = cursor.fetchone()[0]
+
+        return render_template(
+            'scores_easy.html',
+            top_scores=top_scores,
+            last_score=last_score,
+            last_position=last_position
+        )
+    
+# MEdio
+
+@app.route('/media', methods=['GET', 'POST'])
+def show_scores_media():
+    if request.method == 'POST':
+        data = request.get_json()
+        session["player"] = data.get("player", None)
+
+        db = get_db()
+
+        required_keys = ['player', 'final_score', 'count', 'difficulty']
+        data = {key: session.get(key) for key in required_keys}
+
+        if any(value is None for value in data.values()):
+            return redirect(url_for('index'))
+        
+        if data['difficulty'] in ['easy', 'medium', 'hard']:
+            table_name = data['difficulty']
+        else:
+            return redirect(url_for('index'))  
+        
+        db.execute(
+            f'INSERT INTO {table_name} (nombre, puntuacion, tiempo) VALUES (?, ?, ?)',
+            (data['player'], data['final_score'], data['count'])
+        )
+        
+        last_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+        session['last_score_id'] = last_id  
+
+        db.commit()
+
+        return _OK
+
+        
+    if request.method == "GET":
+        """Mostrar los 10 mejores puntajes y la posición del último puntaje del usuario."""
+        db = get_db()
+
+        difficulty = session.get('difficulty')
+
+        if not difficulty or difficulty not in ['easy', 'medium', 'hard']:
+            return redirect(url_for('index'))
+
+       
+        cursor = db.execute(
+            f'SELECT nombre, puntuacion, tiempo FROM medium ORDER BY puntuacion DESC, tiempo ASC LIMIT 10'
+        )
+        top_scores = cursor.fetchall()
+
+        # Obtener el puntaje de la última partida
+        last_score_id = session.get('last_score_id')  # Guarda el ID del puntaje al insertar
+        last_score = None
+        last_position = None
+
+        if last_score_id:
+            # Obtener los detalles del último puntaje
+            cursor = db.execute(
+                f'SELECT nombre, puntuacion, tiempo FROM medium WHERE id = ?',
+                (last_score_id,)
+            )
+
+            last_score = cursor.fetchone()
+
+            cursor = db.execute(
+                f'''
+                SELECT COUNT(*) + 1
+                FROM medium
+                WHERE puntuacion > (SELECT puntuacion FROM medium WHERE id = ?)
+                OR (puntuacion = (SELECT puntuacion FROM medium WHERE id = ?) AND tiempo < (SELECT tiempo FROM medium WHERE id = ?))
+                ''',
+                (last_score_id, last_score_id, last_score_id)
+            )
+
+            last_position = cursor.fetchone()[0]
+
+        return render_template(
+            'scores_media.html',
+            top_scores=top_scores,
+            last_score=last_score,
+            last_position=last_position
+        )
+    
+#Dificil
+@app.route('/alta', methods=['GET', 'POST'])
+def show_scores_alta():
+    if request.method == 'POST':
+        data = request.get_json()
+        session["player"] = data.get("player", None)
+
+        db = get_db()
+
+        required_keys = ['player', 'final_score', 'count', 'difficulty']
+        data = {key: session.get(key) for key in required_keys}
+
+        if any(value is None for value in data.values()):
+            return redirect(url_for('index'))
+        
+        if data['difficulty'] in ['easy', 'medium', 'hard']:
+            table_name = data['difficulty']
+        else:
+            return redirect(url_for('index'))  
+        
+        db.execute(
+            f'INSERT INTO {table_name} (nombre, puntuacion, tiempo) VALUES (?, ?, ?)',
+            (data['player'], data['final_score'], data['count'])
+        )
+        
+        last_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+        session['last_score_id'] = last_id  
+
+        db.commit()
+
+        return _OK
+
+        
+    if request.method == "GET":
+        """Mostrar los 10 mejores puntajes y la posición del último puntaje del usuario."""
+        db = get_db()
+
+        difficulty = session.get('difficulty')
+
+        if not difficulty or difficulty not in ['easy', 'medium', 'hard']:
+            return redirect(url_for('index'))
+
+       
+        cursor = db.execute(
+            f'SELECT nombre, puntuacion, tiempo FROM hard ORDER BY puntuacion DESC, tiempo ASC LIMIT 10'
+        )
+        top_scores = cursor.fetchall()
+
+        # Obtener el puntaje de la última partida
+        last_score_id = session.get('last_score_id')  # Guarda el ID del puntaje al insertar
+        last_score = None
+        last_position = None
+
+        if last_score_id:
+            # Obtener los detalles del último puntaje
+            cursor = db.execute(
+                f'SELECT nombre, puntuacion, tiempo FROM hard WHERE id = ?',
+                (last_score_id,)
+            )
+
+            last_score = cursor.fetchone()
+
+            cursor = db.execute(
+                f'''
+                SELECT COUNT(*) + 1
+                FROM hard
+                WHERE puntuacion > (SELECT puntuacion FROM hard WHERE id = ?)
+                OR (puntuacion = (SELECT puntuacion FROM hard WHERE id = ?) AND tiempo < (SELECT tiempo FROM hard WHERE id = ?))
+                ''',
+                (last_score_id, last_score_id, last_score_id)
+            )
+
+            last_position = cursor.fetchone()[0]
+
+        return render_template(
+            'scores_alta.html',
+            top_scores=top_scores,
+            last_score=last_score,
+            last_position=last_position
+        )
 
 
 

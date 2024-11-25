@@ -13,6 +13,7 @@
   </head>
   <body class="bg-dark text-light d-flex align-items-center justify-content-center vh-100">
     <div class="container mt-5">
+      <h1 class="text-center">Difucultad Media</h1>
       <h1 class="text-center">Tabla de Puntuaciones</h1>
 
       <!-- Contenedor para hacer la tabla responsiva -->
@@ -71,15 +72,6 @@
         <a href="/" class="btn btn-primary">VOLVER A JUGAR</a>
       </div>
       
-      <div class="text-center mt-4 mb-4">
-
-        <h5 class="mb-4"> Filtrar por Dificultad </h5>
-        
-        <a href="{{ url_for('show_scores_easy') }}" target="_blank" class="btn btn-outline-primary btn-lg">BAJA</a>
-        <a href="{{ url_for('show_scores_media') }}" target="_blank" class="btn btn-outline-warning btn-lg">MEDIA</a>
-        <a href="{{ url_for('show_scores_alta') }}" target="_blank" class="btn btn-outline-danger btn-lg">ALTA</a>
-
-      </div>
     </div>
   </body>
 </html>
