@@ -53,9 +53,9 @@
       {% endfor %}
     </div>
     <script>
-      const REDIRECT_DELAY = 300;
-      const SMOOTH_TRANSITION = 1000;
-      const NONMATCHED_DELAY = 2000;
+      const REDIRECT_DELAY = 200;
+      const SMOOTH_TRANSITION = 800;
+      const NONMATCHED_DELAY = 1000;
       const TIME_TO_SHOW = 3000;
 
       const TOTAL_CARDS = document.querySelectorAll(".card").length;
@@ -165,6 +165,9 @@
             secondCard.querySelector(".card-image").style.display = "none";
 
             score -= penalization;
+            if (score < 0){
+              score = 0;
+            }
             document.getElementById("score").innerText = score;
 
             flippedCards = [];
