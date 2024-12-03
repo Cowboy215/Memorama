@@ -75,11 +75,30 @@
 
         <h5 class="mb-4"> Filtrar por Dificultad </h5>
         
-        <a href="{{ url_for('show_scores_easy') }}" target="_blank" class="btn btn-outline-primary btn-lg">BAJA</a>
-        <a href="{{ url_for('show_scores_media') }}" target="_blank" class="btn btn-outline-warning btn-lg">MEDIA</a>
-        <a href="{{ url_for('show_scores_alta') }}" target="_blank" class="btn btn-outline-danger btn-lg">ALTA</a>
+        <button onclick="changeTable('easy')" class="btn btn-outline-primary btn-lg">BAJA</button>
+        <button onclick="changeTable('medium')" class="btn btn-outline-warning btn-lg">MEDIA</button>
+        <button onclick="changeTable('hard')" class="btn btn-outline-danger btn-lg">ALTA</button>
+
 
       </div>
     </div>
+    <script>
+      function changeTable(difficulty) {
+        fetch("/scores", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ change: difficulty }),
+          })
+          .then((response) => {
+          if (response.ok) {
+              window.location.replace("/scores");
+          } else {
+              throw new Error("Error en la solicitud");
+          }
+          })
+          .catch((error) => console.error("ERROR:", error));
+        
+      }
+    </script>
   </body>
 </html>
