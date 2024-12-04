@@ -1,12 +1,17 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tecnorama</title>
+    <!-- Agregar Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         /* Fondo de la página */
-        body, html {
+        body,
+        html {
             margin: 0;
             padding: 0;
             height: 100%;
@@ -56,8 +61,10 @@
         h1 {
             font-size: 3.5rem;
             margin-bottom: 20px;
-            text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.7); /* Sombra para resaltar */
-            letter-spacing: 2px; /* Espacio entre letras */
+            text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.7);
+            /* Sombra para resaltar */
+            letter-spacing: 2px;
+            /* Espacio entre letras */
             font-weight: bold;
         }
 
@@ -71,22 +78,109 @@
             border-radius: 5px;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3); /* Sombra */
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+            /* Sombra */
         }
 
         .start-button:hover {
             background-color: #0077b5;
-            transform: scale(1.1); /* Aumenta ligeramente el tamaño al pasar el mouse */
-            box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.5); /* Incremento de la sombra al hacer hover */
+            transform: scale(1.1);
+            /* Aumenta ligeramente el tamaño al pasar el mouse */
+            box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.5);
+            /* Incremento de la sombra al hacer hover */
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Bienvenido a Tecnorama</h1>
         <form action="{{ url_for('difficulty') }}" method="get">
             <button type="submit" class="start-button">Comenzar</button>
         </form>
+
+        <button class="start-button" style="margin-top: 10px;" onclick="mostrarInstructivo()">¿Como Jugar?</button>
     </div>
 </body>
+
+
+
+<script>
+    function mostrarInstructivo() {
+        Swal.fire({
+            title: 'Instructivo',
+            html: `
+                <p>Este es un memorama virtual inspirado en los íconos de los lenguajes de programación. El objetivo del juego es memorizar la ubicación de las cartas y encontrar todas las parejas posibles lo más rápido que puedas.</p>
+                <p>Cada vez que encuentres una pareja de cartas, estas quedarán volteadas y visibles en el tablero.</p>
+                <p>El juego terminará cuando se acabe el tiempo o el puntaje se agote. Ten en cuenta que cada error tendrá una penalización.</p>
+                <p>Tu habilidad para recordar las cartas y tu rapidez determinarán tu puntaje final.</p>
+            `,
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonText: 'Siguiente',
+            //cancelButtonText: '¿Que es un Memorama?',
+            //allowOutsideClick: false,
+
+        }).then((result) => {
+            // Si el usuario presiona "Siguiente"
+            if (result.isConfirmed) {
+                // Segunda alerta (Catálogo)
+                Swal.fire({
+                    title: 'Importante',
+                    html: `
+                            <ul>
+                                <li>Por nivel tendrás un puntaje y tiempo en la parte superior del tablero, el cual determinará tu posición en la tabla.</li>
+                                <li>Trata de equivocarte lo menos posible, ya que de eso dependerá tu posicionamiento en la tabla de puntuaciones.</li>
+                                <li>Puedes guardar tu partida de forma anónima; solo tienes que dejar el espacio en blanco.</li>
+                            </ul>
+                        `,
+                    icon: 'warning',
+                    confirmButtonText: 'Siguiente',
+                    allowOutsideClick: false,
+                }).then((result) => {
+                    // Si el usuario presiona "Siguiente"
+                    if (result.isConfirmed) {
+                        Swal.fire({
+                            title: 'Tabla de Pocicionamiento',
+                            html: 'En la <b>tabla de posicionamiento</b>, podrás filtrar por <b>dificultad</b>. Ten en cuenta esta opción al revisar los resultados.',
+                            iconHtml: '<i class="fas fa-trophy"></i>',
+                            confirmButtonText: 'Siguiente',
+                            allowOutsideClick: false,
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                Swal.fire({
+                                    title: 'Perfecto',
+                                    html: '¡Estás listo para comenzar! Haz clic en <b>Comenzar</b> para iniciar el juego.',
+                                    icon: 'success',
+                                    confirmButtonText: 'Empezar',
+                                    allowOutsideClick: false,
+                                })
+                            }
+                        });
+                    }
+                });
+            } //else if (result.isDismissed) {
+                //Swal.fire({
+                //     title: '¿No sabes qué es un memorama?',
+                //     html: 'Te invitamos a revisar las <a href="https://www.memo-juegos.com/juegos-de-memoria-online/las-reglas-del-juego" target="_blank"><b>reglas del juego</b></a> para familiarizarte. Una vez que hayas leído, ¡regresa aquí para continuar!',
+                //     icon: 'info',
+                //     confirmButtonText: 'Entendido, ¡volveré pronto!',
+                //     cancelButtonText: 'Cancelar',
+                //     showCancelButton: true,
+                //     //allowOutsideClick: false,
+                // }).then((result) => {
+                    //if (result.isConfirmed) {
+                        // Abre la URL en una nueva pestaña después de que el usuario haya confirmado
+                        //window.open('https://www.memo-juegos.com/juegos-de-memoria-online/las-reglas-del-juego', '_blank');  // Sustituye con la URL a la que deseas redirigir
+                    //}
+                //});
+
+            //}
+
+
+
+        });
+    }
+</script>
+
 </html>
